@@ -1,17 +1,11 @@
 """
-RAG 服务数据库连接
-共用 PostgreSQL，使用独立 Schema
+RAG database connection and initialization.
 """
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 from app.config import DATABASE_URL, RAG_SCHEMA
-
-
-# ============================================
-# region 数据库引擎
-# ============================================
 
 engine = create_engine(
     DATABASE_URL,
@@ -21,37 +15,47 @@ engine = create_engine(
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
+
+# ============================================
+# region 数据库
+# ============================================
+def init_db() -> None:
+    """Initialize schema, extensions, and indexes."""
+    with engine.connect() as conn:
+        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {RAG_SCHEMA}"))
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+
+        conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS documents_content_fts_idx
+            ON {RAG_SCHEMA}.documents
+            USING GIN (to_tsvector('simple', content))
+            WHERE collection IN ('performances', 'contracts')
+        """))
+
+        conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS documents_name_trgm_idx
+            ON {RAG_SCHEMA}.documents
+            USING GIN (lower(coalesce(doc_metadata->>'name', '')) gin_trgm_ops)
+            WHERE collection IN ('enterprises', 'lawyers')
+        """))
+
+        conn.commit()
 # endregion
 # ============================================
 
 
 # ============================================
-# region 数据库初始化
+# region 数据库
 # ============================================
-
-def init_db():
-    """初始化数据库：创建 schema 和启用 pgvector"""
-    with engine.connect() as conn:
-        # 创建独立 schema
-        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {RAG_SCHEMA}"))
-        
-        # 启用 pgvector 扩展
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        
-        conn.commit()
-        print(f"✅ RAG Schema '{RAG_SCHEMA}' 已就绪")
-
-
 def get_db():
-    """获取数据库会话（FastAPI 依赖注入用）"""
+    """Yield DB session for FastAPI dependency injection."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
 # endregion
 # ============================================

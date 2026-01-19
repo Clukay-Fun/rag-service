@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import init_db, engine
 from app.db.models import Base
-from app.api import search
+from app.api import search, chat
 
 
 # ============================================
@@ -63,6 +63,7 @@ app.add_middleware(
 # ============================================
 
 app.include_router(search.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
 
 # endregion
 # ============================================
