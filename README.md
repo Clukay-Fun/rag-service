@@ -84,6 +84,8 @@ curl -X POST "http://localhost:8001/api/v1/search/" \
 - [x] 服务层：embedding/retriever 增加类型校验、HTTP 错误处理、可选 rerank 开关，纯 PostgreSQL+pgvector
 - [x] API 层：重写 search/chat 路由与 Pydantic 模型，补充异常处理，路由前缀与 README 对齐
 - [x] 最小回环测试：`tests/test_search_api.py` 覆盖索引→检索闭环
+- [x] 分块/解析工具：`app/services/chunker.py` 按 chunk_size/overlap 切分；`app/services/parser.py` 简单文本解析
+- [x] pgvector 集成测试（可选）：`tests/test_pgvector_integration.py`，设置 `PGVECTOR_TEST_URL` 时运行
 
 ### 🚧 进行中
 - [ ] 检索/向量化流程优化与健壮性加强（如 embedding 维度校验/日志）
