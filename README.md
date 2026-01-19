@@ -78,17 +78,18 @@ curl -X POST "http://localhost:8001/api/v1/search/" \
 ---
 
 ## 开发进度
-
 ### ✅ 已完成
-- [x] 基础配置清理：移除 Redis 配置、集中检索/分块超参
-- [x] 入口与核心模块文件头注释、UTF-8 清理
+- [x] 配置与入口清理：移除 Redis，集中检索/分块超参，文件头注释与 UTF-8 清理
+- [x] 数据层：`init_db`/`ensure_indexes` 区分，向量/全文/trigram 索引幂等创建，模型索引补全
+- [x] 服务层：embedding/retriever 增加类型校验、HTTP 错误处理、可选 rerank 开关，纯 PostgreSQL+pgvector
+- [x] API 层：重写 search/chat 路由与 Pydantic 模型，补充异常处理，路由前缀与 README 对齐
+- [x] 最小回环测试：`tests/test_search_api.py` 覆盖索引→检索闭环
 
 ### 🚧 进行中
-- [ ] 检索/向量化流程优化与健壮性加强
-- [ ] API 返回结构与错误处理统一
+- [ ] 检索/向量化流程优化与健壮性加强（如 embedding 维度校验/日志）
 
 ### 📝 待开发
-- [ ] 上传→检索 回环集成测试
+- [ ] 上传→检索集成测试（真实 pgvector 环境）
 - [ ] 分块与文档解析流程实现
 - [ ] 部署脚本与示例客户端
 
