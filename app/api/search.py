@@ -10,8 +10,8 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -28,14 +28,20 @@ router = APIRouter(prefix="/search", tags=["search"])
 # ============================================
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, description="查询文本")
-    collection: str = Field(..., description="集合名")
+    collection: str = Field(..., min_length=1, description="集合名")
     top_k: int = Field(default=VECTOR_TOP_K, ge=1, le=50, description="返回数量")
     use_rerank: bool = Field(default=True, description="是否执行 rerank")
 
 
+class IndexDocument(BaseModel):
+    content: str = Field(..., min_length=1, description="文档内容")
+    source_id: Optional[int] = Field(None, description="来源 ID")
+    metadata: dict = Field(default_factory=dict, description="元数据")
+
+
 class IndexRequest(BaseModel):
-    collection: str = Field(..., description="集合名")
-    documents: List[dict] = Field(..., description="文档列表")
+    collection: str = Field(..., min_length=1, description="集合名")
+    documents: List[IndexDocument] = Field(..., description="文档列表")
 # endregion
 # ============================================
 
@@ -70,7 +76,7 @@ class IndexResponse(BaseModel):
 # ============================================
 # region API
 # ============================================
-@router.post("/", response_model=SearchResponse)
+@router.post("/", response_model=SearchResponse, status_code=status.HTTP_200_OK)
 async def search(request: SearchRequest, db: Session = Depends(get_db)):
     """语义搜索接口。"""
     results = hybrid_search(
@@ -90,13 +96,13 @@ async def search(request: SearchRequest, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/index", response_model=IndexResponse)
+@router.post("/index", response_model=IndexResponse, status_code=status.HTTP_200_OK)
 async def index_documents(request: IndexRequest, db: Session = Depends(get_db)):
     """批量索引文档。"""
     indexed = 0
     failed = 0
 
-    texts = [doc.get("content") or doc.get("text") or "" for doc in request.documents]
+    texts = [doc.content for doc in request.documents]
     embeddings = get_embeddings_batch(texts)
 
     if len(embeddings) != len(request.documents):
@@ -104,12 +110,11 @@ async def index_documents(request: IndexRequest, db: Session = Depends(get_db)):
 
     for doc, embedding in zip(request.documents, embeddings):
         try:
-            content = doc.get("content") or doc.get("text") or ""
             new_doc = Document(
                 collection=request.collection,
-                source_id=doc.get("source_id"),
-                content=content,
-                doc_metadata=doc.get("metadata", {}),
+                source_id=doc.source_id,
+                content=doc.content,
+                doc_metadata=doc.metadata,
                 embedding=embedding,
             )
             db.add(new_doc)
@@ -117,7 +122,11 @@ async def index_documents(request: IndexRequest, db: Session = Depends(get_db)):
         except Exception:
             failed += 1
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"db commit failed: {exc}") from exc
 
     return IndexResponse(
         collection=request.collection,
@@ -126,15 +135,30 @@ async def index_documents(request: IndexRequest, db: Session = Depends(get_db)):
     )
 
 
-@router.delete("/{collection}")
+@router.delete(
+    "/{collection}",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
 async def delete_collection(collection: str, db: Session = Depends(get_db)):
     """删除指定集合的全部文档。"""
+    if not collection:
+        raise HTTPException(status_code=400, detail="collection is required")
+
     deleted = db.query(Document).filter(Document.collection == collection).delete()
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"db commit failed: {exc}") from exc
     return {"collection": collection, "deleted": deleted}
 
 
-@router.get("/collections")
+@router.get(
+    "/collections",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
 async def list_collections(db: Session = Depends(get_db)):
     """列出当前所有集合及计数。"""
     from sqlalchemy import func

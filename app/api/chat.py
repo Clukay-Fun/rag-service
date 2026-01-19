@@ -8,7 +8,7 @@
 依赖: fastapi, pydantic, app.orchestrator, app.skills
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.orchestrator.router import SkillRouter
@@ -46,11 +46,17 @@ class ChatResponse(BaseModel):
 # ============================================
 # region API
 # ============================================
-@router.post("/", response_model=ChatResponse)
+@router.post("/", response_model=ChatResponse, status_code=status.HTTP_200_OK)
 async def chat(request: ChatRequest) -> ChatResponse:
     """聊天入口，自动路由到技能并返回结果。"""
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=400, detail="message is required")
+
     routing = await skill_router.route(request.message)
     skill = registry.get(routing.skill_name)
+    if not skill:
+        raise HTTPException(status_code=404, detail="skill not found")
+
     result: SkillOutput = await skill.execute(
         SkillInput(query=request.message, user_id=request.user_id)
     )
