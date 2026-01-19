@@ -1,5 +1,11 @@
 """
-RAG database connection and initialization.
+文件名: database.py
+描述: 数据库引擎、Session 工厂及初始化逻辑。
+主要功能:
+    - 创建 SQLAlchemy Engine 与 SessionLocal
+    - 初始化 schema 与 pgvector/pg_trgm 扩展、必要索引
+    - 提供 FastAPI 依赖获取数据库会话
+依赖: sqlalchemy, app.config
 """
 
 from sqlalchemy import create_engine, text
@@ -13,16 +19,22 @@ engine = create_engine(
     max_overflow=10,
     pool_pre_ping=True,
 )
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
 # ============================================
-# region 数据库
+# region 数据库初始化
 # ============================================
 def init_db() -> None:
-    """Initialize schema, extensions, and indexes."""
+    """
+    初始化数据库 schema、扩展与索引。
+
+    主要创建:
+    - schema: RAG_SCHEMA
+    - 扩展: vector, pg_trgm
+    - 基本全文/模糊检索索引（视 collection 适用范围）
+    """
     with engine.connect() as conn:
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {RAG_SCHEMA}"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
@@ -48,10 +60,10 @@ def init_db() -> None:
 
 
 # ============================================
-# region 数据库
+# region FastAPI 依赖
 # ============================================
 def get_db():
-    """Yield DB session for FastAPI dependency injection."""
+    """FastAPI 依赖：提供一个数据库会话，确保关闭。"""
     db = SessionLocal()
     try:
         yield db

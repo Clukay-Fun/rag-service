@@ -1,5 +1,9 @@
 """
-RAG data models.
+文件名: models.py
+描述: 定义 RAG Service 使用的核心数据库模型。
+主要功能:
+    - 文档表 Document，存储向量、内容及元数据
+依赖: sqlalchemy, pgvector, app.config, app.db.database
 """
 
 from datetime import datetime
@@ -11,12 +15,11 @@ from app.db.database import Base
 
 
 # ============================================
-# region 数据库
+# region 模型定义
 # ============================================
 class Document(Base):
-    """
-    Generic vector document.
-    """
+    """向量化文档模型。"""
+
     __tablename__ = "documents"
     __table_args__ = {"schema": RAG_SCHEMA}
 
@@ -30,6 +33,7 @@ class Document(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     def to_dict(self) -> dict:
+        """转为可序列化字典。"""
         return {
             "id": self.id,
             "collection": self.collection,
