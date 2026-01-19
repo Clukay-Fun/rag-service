@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.db.database import init_db, engine
+from app.db.database import init_db, ensure_indexes, engine
 from app.db.models import Base
 from app.api import search, chat
 
@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     print("RAG Service 正在启动...")
     init_db()
     Base.metadata.create_all(bind=engine)
+    ensure_indexes()
     print("RAG Service 启动完成。")
 
     yield

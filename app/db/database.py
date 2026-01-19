@@ -3,7 +3,8 @@
 描述: 数据库引擎、Session 工厂及初始化逻辑。
 主要功能:
     - 创建 SQLAlchemy Engine 与 SessionLocal
-    - 初始化 schema 与 pgvector/pg_trgm 扩展、必要索引
+    - 初始化 schema 与 pgvector/pg_trgm 扩展
+    - 创建必要的索引（在表创建后执行）
     - 提供 FastAPI 依赖获取数据库会话
 依赖: sqlalchemy, app.config
 """
@@ -28,17 +29,35 @@ Base = declarative_base()
 # ============================================
 def init_db() -> None:
     """
-    初始化数据库 schema、扩展与索引。
+    初始化数据库 schema 与扩展（不依赖表存在）。
 
     主要创建:
     - schema: RAG_SCHEMA
     - 扩展: vector, pg_trgm
-    - 基本全文/模糊检索索引（视 collection 适用范围）
     """
     with engine.connect() as conn:
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {RAG_SCHEMA}"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+        conn.commit()
+
+
+def ensure_indexes() -> None:
+    """
+    在表创建后调用，确保必要索引存在。
+
+    包括:
+    - 向量索引 (hnsw, cosine)
+    - 全文索引 (content)
+    - 名称 trigram 索引 (metadata->>'name')
+    """
+    with engine.connect() as conn:
+        conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS documents_embedding_hnsw_idx
+            ON {RAG_SCHEMA}.documents
+            USING hnsw (embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 64)
+        """))
 
         conn.execute(text(f"""
             CREATE INDEX IF NOT EXISTS documents_content_fts_idx
