@@ -54,6 +54,11 @@ def vector_search(
     返回:
         (Document, distance) 列表
     """
+    if not query or not query.strip():
+        return []
+    top_k = max(1, min(top_k, 100))
+    threshold = max(0.0, threshold)
+
     query_embedding = get_embedding(query)
     if not query_embedding:
         return []
@@ -233,6 +238,7 @@ def keyword_search(
     """
     if not query or not query.strip():
         return []
+    top_k = max(1, min(top_k, 100))
 
     if collection in KEYWORD_TSVECTOR_COLLECTIONS:
         res = _tsvector_search(db, query, collection, top_k)
@@ -260,6 +266,8 @@ def rerank(
     """使用外部模型对结果 rerank。"""
     if not documents:
         return []
+    if not (SILICONFLOW_API_KEY and SILICONFLOW_BASE_URL and RERANK_MODEL):
+        return documents[:top_k]
 
     try:
         response = httpx.post(
@@ -286,9 +294,11 @@ def rerank(
             doc["rerank_score"] = score
             reranked.append(doc)
         return reranked or documents[:top_k]
+    except httpx.HTTPError as exc:  # pragma: no cover
+        print(f"[rerank] http error: {exc}")
     except Exception as exc:  # pragma: no cover
         print(f"[rerank] failed: {exc}")
-        return documents[:top_k]
+    return documents[:top_k]
 # endregion
 # ============================================
 
@@ -355,6 +365,9 @@ def hybrid_search(
     """
     混合检索：向量检索 + 可选关键词检索 + 可选 rerank。
     """
+    if not query or not collection:
+        return []
+
     vector_results = vector_search(db, query, collection, top_k=top_k)
     keyword_results: List[Tuple[Document, float]] = []
 
@@ -365,7 +378,7 @@ def hybrid_search(
     if not documents:
         return []
 
-    if use_rerank and len(documents) > rerank_top_k:
+    if use_rerank and len(documents) > rerank_top_k and rerank_top_k > 0:
         documents = rerank(query, documents, top_k=rerank_top_k)
     else:
         documents = documents[:rerank_top_k]

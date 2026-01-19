@@ -17,6 +17,15 @@ from app.config import (
     EMBEDDING_MODEL,
 )
 
+HEADERS = {
+    "Authorization": f"Bearer {SILICONFLOW_API_KEY}",
+    "Content-Type": "application/json",
+}
+
+
+def _can_call_api() -> bool:
+    return bool(SILICONFLOW_API_KEY and SILICONFLOW_BASE_URL)
+
 
 # ============================================
 # region 单条向量生成
@@ -32,27 +41,34 @@ def get_embedding(text: str) -> Optional[List[float]]:
     """
     if not text or not text.strip():
         return None
+    if not _can_call_api():
+        print("[embedding] missing API key or base url")
+        return None
 
+    payload = {
+        "model": EMBEDDING_MODEL,
+        "input": text,
+        "encoding_format": "float",
+    }
     try:
         response = httpx.post(
             f"{SILICONFLOW_BASE_URL}/embeddings",
-            headers={
-                "Authorization": f"Bearer {SILICONFLOW_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": EMBEDDING_MODEL,
-                "input": text,
-                "encoding_format": "float",
-            },
+            headers=HEADERS,
+            json=payload,
             timeout=30.0,
         )
         response.raise_for_status()
         result = response.json()
-        return result["data"][0]["embedding"]
-    except Exception as exc:  # pragma: no cover - 网络异常打印即可
+        data = result.get("data") or []
+        if not data:
+            return None
+        embedding = data[0].get("embedding")
+        return embedding if isinstance(embedding, list) else None
+    except httpx.HTTPError as exc:  # pragma: no cover - 网络异常打印即可
+        print(f"[embedding] http error: {exc}")
+    except Exception as exc:  # pragma: no cover
         print(f"[embedding] get_embedding failed: {exc}")
-        return None
+    return None
 # endregion
 # ============================================
 
@@ -71,30 +87,39 @@ def get_embeddings_batch(texts: List[str]) -> List[Optional[List[float]]]:
     """
     if not texts:
         return []
+    if not _can_call_api():
+        print("[embedding] missing API key or base url")
+        return [None] * len(texts)
 
-    # 过滤空文本，保持索引对齐
     valid_texts = [t if t and t.strip() else "" for t in texts]
 
+    payload = {
+        "model": EMBEDDING_MODEL,
+        "input": valid_texts,
+        "encoding_format": "float",
+    }
     try:
         response = httpx.post(
             f"{SILICONFLOW_BASE_URL}/embeddings",
-            headers={
-                "Authorization": f"Bearer {SILICONFLOW_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": EMBEDDING_MODEL,
-                "input": valid_texts,
-                "encoding_format": "float",
-            },
+            headers=HEADERS,
+            json=payload,
             timeout=60.0,
         )
         response.raise_for_status()
         result = response.json()
-        data = sorted(result["data"], key=lambda x: x["index"])
-        return [item["embedding"] for item in data]
+        data = sorted(result.get("data", []), key=lambda x: x.get("index", 0))
+        embeddings: List[Optional[List[float]]] = []
+        for item in data:
+            embedding = item.get("embedding")
+            embeddings.append(embedding if isinstance(embedding, list) else None)
+        # 若 API 未按长度返回，填充 None 以对齐
+        while len(embeddings) < len(texts):
+            embeddings.append(None)
+        return embeddings
+    except httpx.HTTPError as exc:  # pragma: no cover
+        print(f"[embedding] http error: {exc}")
     except Exception as exc:  # pragma: no cover
         print(f"[embedding] get_embeddings_batch failed: {exc}")
-        return [None] * len(texts)
+    return [None] * len(texts)
 # endregion
 # ============================================
