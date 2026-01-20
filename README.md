@@ -50,7 +50,8 @@ requirements.txt：新增 markitdown>=0.0.1。
 新增 /health 与 /ready 探针，/ready 校验数据库连通与模型就绪；新增 /metrics 输出 Prometheus 指标（请求量/延迟、摄取计数、活跃 KB、chunk 总数），并接入请求与摄取计数采集。
 新增测试：test_observability_api.py。
 - [x] 任务 8 - 测试矩阵扩展
-新增服务层单元测试（知识库状态机、清理任务执行、检索评分归一化与异常路径），补充检索 top_k 上限测试，扩大测试覆盖。
+新增服务层单元测试（知识库状态机、清理任务执行、检索评分归一化与异常路径），补充检索 top_k 上限测试，并加入端到端流程、简化性能基准、并发与指标准确性测试，补齐解析失败路径与清理重试逻辑测试。
+新增测试：test_end_to_end_flow.py、test_performance_smoke.py、test_concurrency.py。
 
 ### 待开发
 - [ ] 无

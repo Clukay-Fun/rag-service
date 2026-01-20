@@ -120,6 +120,19 @@ def set_chunks_total(count: int) -> None:
         _chunks_total = max(count, 0)
 
 
+def reset_metrics() -> None:
+    """
+    重置指标状态（测试用）。
+    """
+    with _lock:
+        global _knowledge_bases_active, _chunks_total
+        _http_requests_total.clear()
+        _http_request_duration.clear()
+        _document_ingestion_total.clear()
+        _knowledge_bases_active = 0
+        _chunks_total = 0
+
+
 # endregion
 # ============================================
 
