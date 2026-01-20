@@ -19,6 +19,7 @@ from fastapi.exceptions import RequestValidationError
 
 from .api.cleanup_tasks import router as cleanup_task_router
 from .api.documents import router as document_router
+from .api.chat import router as chat_router
 from .api.knowledge_bases import router as knowledge_base_router
 from .api.observability import router as observability_router
 from .api.search import router as search_router
@@ -112,6 +113,7 @@ def create_app() -> FastAPI:
     app.include_router(document_router)
     app.include_router(search_router)
     app.include_router(observability_router)
+    app.include_router(chat_router)
 
     # endregion
     # ============================================

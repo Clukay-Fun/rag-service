@@ -4,7 +4,7 @@
 主要功能:
     - 生成并归一化 embedding。
     - 事务性写入分块向量并更新文档状态。
-依赖: SQLAlchemy
+依赖: SQLAlchemy, httpx
 """
 
 from __future__ import annotations
@@ -12,11 +12,13 @@ from __future__ import annotations
 import math
 from typing import Callable, Iterable, List
 
+import httpx
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db.models import Document, DocumentChunk, DocumentStatus
-from app.errors import AppError
+from app.errors import AppError, ErrorDetail
 from app.services.chunker import Chunk
 from app.services.metrics import record_document_ingestion
 
@@ -43,14 +45,76 @@ def l2_normalize(vector: Iterable[float]) -> List[float]:
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
     """
-    将文本列表转为向量列表（占位实现）。
+    将文本列表转为向量列表（远程调用）。
 
     参数:
         texts: 输入文本列表。
     返回:
         向量列表。
     """
-    raise NotImplementedError("embedding 服务未实现")
+    settings = get_settings()
+    if not settings.embedding_model:
+        raise AppError(
+            status_code=503,
+            code="SERVICE_UNAVAILABLE",
+            message="向量模型未配置",
+            details=[ErrorDetail(field="embedding_model", code="MISSING", message="缺少向量模型名称")],
+        )
+    if not settings.embedding_api_key:
+        raise AppError(
+            status_code=503,
+            code="SERVICE_UNAVAILABLE",
+            message="向量模型未配置",
+            details=[ErrorDetail(field="embedding_api_key", code="MISSING", message="缺少向量模型密钥")],
+        )
+    if not settings.embedding_url and not settings.embedding_base_url:
+        raise AppError(
+            status_code=503,
+            code="SERVICE_UNAVAILABLE",
+            message="向量模型未配置",
+            details=[ErrorDetail(field="embedding_base_url", code="MISSING", message="缺少向量模型地址")],
+        )
+
+    url = (
+        settings.embedding_url
+        if settings.embedding_url
+        else settings.embedding_base_url.rstrip("/") + "/embeddings"
+    )
+    headers = {"Authorization": f"Bearer {settings.embedding_api_key}"}
+    payload = {"model": settings.embedding_model, "input": texts}
+    try:
+        response = httpx.post(url, headers=headers, json=payload, timeout=settings.llm_timeout_seconds)
+    except httpx.RequestError as exc:
+        raise AppError(
+            status_code=502,
+            code="UPSTREAM_EMBEDDING_ERROR",
+            message="向量模型调用失败",
+            details=[ErrorDetail(field="embedding", code="REQUEST_ERROR", message=str(exc))],
+        ) from exc
+    if response.status_code >= 400:
+        raise AppError(
+            status_code=502,
+            code="UPSTREAM_EMBEDDING_ERROR",
+            message="向量模型调用失败",
+            details=[ErrorDetail(field="embedding", code=str(response.status_code), message=response.text)],
+        )
+
+    payload_json = response.json()
+    embeddings = _parse_embedding_response(payload_json)
+    if len(embeddings) != len(texts):
+        raise AppError(
+            status_code=502,
+            code="UPSTREAM_EMBEDDING_ERROR",
+            message="向量模型返回数量不一致",
+            details=[
+                ErrorDetail(
+                    field="embedding",
+                    code="COUNT_MISMATCH",
+                    message="向量数量与输入不一致",
+                )
+            ],
+        )
+    return embeddings
 
 
 _DEFAULT_EMBEDDER = embed_texts
@@ -82,7 +146,42 @@ def is_embedder_ready() -> bool:
     返回:
         是否已配置 embedding 实现。
     """
-    return embed_texts is not _DEFAULT_EMBEDDER
+    if embed_texts is not _DEFAULT_EMBEDDER:
+        return True
+    settings = get_settings()
+    return bool(
+        (settings.embedding_url or settings.embedding_base_url)
+        and settings.embedding_api_key
+        and settings.embedding_model
+    )
+
+
+def _parse_embedding_response(payload: object) -> List[List[float]]:
+    """
+    解析向量模型返回结果。
+
+    参数:
+        payload: 返回 JSON。
+    返回:
+        向量列表。
+    """
+    if not isinstance(payload, dict):
+        return []
+    if "data" in payload:
+        data = payload.get("data")
+        if isinstance(data, list):
+            if data and isinstance(data[0], dict):
+                if "embedding" in data[0]:
+                    return [item.get("embedding", []) for item in data]
+                if "vector" in data[0]:
+                    return [item.get("vector", []) for item in data]
+            if data and isinstance(data[0], list):
+                return data
+    if "embeddings" in payload and isinstance(payload.get("embeddings"), list):
+        return payload.get("embeddings", [])
+    if "vectors" in payload and isinstance(payload.get("vectors"), list):
+        return payload.get("vectors", [])
+    return []
 
 
 # endregion
