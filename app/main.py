@@ -17,6 +17,7 @@ import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 
+from .api.cleanup_tasks import router as cleanup_task_router
 from .api.knowledge_bases import router as knowledge_base_router
 from .config import get_settings
 from .errors import AppError, ErrorDetail, error_response
@@ -88,6 +89,7 @@ def create_app() -> FastAPI:
     # ============================================
 
     app.include_router(knowledge_base_router)
+    app.include_router(cleanup_task_router)
 
     # endregion
     # ============================================

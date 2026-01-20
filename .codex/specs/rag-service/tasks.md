@@ -13,7 +13,7 @@
   - 实现创建/更新/删除/列表逻辑（名称唯一、状态机、deleted 后拒绝修改）；DELETE 返回 `cleanup_task_id` 并入队清理任务；分页/过滤。
   - _Requirements: Requirement 1 AC1-11, Requirement 5 AC2_
 
-- [ ] 4. 清理任务执行器与任务查询/重试接口
+- [x] 4. 清理任务执行器与任务查询/重试接口
   - 后台 worker 级联删除文档/分块/向量，记录 progress（processed/total/percentage）、error_message；失败指数退避重试、重试接口校验可重试状态。
   - _Requirements: Requirement 1 AC6-11, Requirement 5 AC2-3_
 
