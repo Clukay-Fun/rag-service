@@ -29,7 +29,7 @@
   - 使用 BGE-M3 生成 L2 归一化向量，事务性写入 chunks+vectors；任意分块失败则回滚、标记文档 `failed`+error_message，成功则置 `completed` 并记录 chunk_count。
   - _Requirements: Requirement 2 AC4-9, Requirement 5 AC3_
 
-- [ ] 6. 语义检索与 rerank API
+- [x] 6. 语义检索与 rerank API
   - `POST /search`：校验 KB 状态 enabled，仅检索 `completed` 文档分块；query embedding→pgvector cosine 取 min(top_k*3, RAG_MAX_RERANK_CANDIDATES) 候选→bge-reranker sigmoid 归一→返回 chunk_text/score/document_id/filename/chunk_index。
   - _Requirements: Requirement 3 AC1-7, Technical Conventions (相关性归一)_
 

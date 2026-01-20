@@ -86,6 +86,7 @@ class Settings:
     hnsw_ef_search: int
     chunk_size: int
     chunk_overlap: int
+    embedding_dim: int
     log_level: str
 
 
@@ -106,6 +107,7 @@ def get_settings() -> Settings:
         hnsw_ef_search=_get_int_env("RAG_HNSW_EF_SEARCH", 40),
         chunk_size=_get_int_env("RAG_CHUNK_SIZE", 512),
         chunk_overlap=_get_int_env("RAG_CHUNK_OVERLAP", 64),
+        embedding_dim=_get_int_env("RAG_EMBEDDING_DIM", 1024),
         log_level=_get_str_env("RAG_LOG_LEVEL", "INFO"),
     )
 

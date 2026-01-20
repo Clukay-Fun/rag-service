@@ -39,12 +39,14 @@ requirements.txt：新增 markitdown>=0.0.1。
 
 实现向量写入与事务回滚：embedding.py（批量 embedding、维度校验、失败标记 failed 并记录 error_message，使用嵌套事务避免会话已有事务冲突）。
 新增测试覆盖成功/失败路径：test_embedding_service.py。
-- [x] 任务 5.2 - 文Embedding 写入与事务控制
+- [x] 任务 5.2 - Embedding 写入与事务控制
+- [x] 任务 6 - 语义检索与重排 API
+新增搜索接口与服务层：embedding_service 提供可注入 embedder，retriever 基于 pgvector 余弦距离检索并对 SQLite 测试降级，reranker 提供可注入排序。
+新增 Schema：search.py。
+路由注册：main.py。
+配置更新：config.py 增加 RAG_EMBEDDING_DIM。
+新增测试：test_search_api.py。
 
 ### 待开发
-- [ ] 任务 3 - 知识库管理 API
-- [ ] 任务 4 - 清理任务执行器与接口
-- [ ] 任务 5 - 文档上传与摄取接口
-- [ ] 任务 6 - 语义检索与重排 API
 - [ ] 任务 7 - 健康探针与可观测性
 - [ ] 任务 8 - 测试矩阵扩展

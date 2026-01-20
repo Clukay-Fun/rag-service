@@ -40,6 +40,29 @@ def l2_normalize(vector: Iterable[float]) -> List[float]:
     return [v / norm for v in values]
 
 
+def embed_texts(texts: List[str]) -> List[List[float]]:
+    """
+    将文本列表转为向量列表（占位实现）。
+
+    参数:
+        texts: 输入文本列表。
+    返回:
+        向量列表。
+    """
+    raise NotImplementedError("embedding 服务未实现")
+
+
+def set_embedder(embedder: Callable[[List[str]], List[List[float]]]) -> None:
+    """
+    设置全局 embedding 实现（用于测试或替换实现）。
+
+    参数:
+        embedder: embedding 函数。
+    """
+    global embed_texts
+    embed_texts = embedder
+
+
 # endregion
 # ============================================
 
