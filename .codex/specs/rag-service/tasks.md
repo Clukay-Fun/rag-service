@@ -17,15 +17,15 @@
   - 后台 worker 级联删除文档/分块/向量，记录 progress（processed/total/percentage）、error_message；失败指数退避重试、重试接口校验可重试状态。
   - _Requirements: Requirement 1 AC6-11, Requirement 5 AC2-3_
 
-- [ ] 5. 文档上传入口与摄取状态查询
+- [x] 5. 文档上传入口与摄取状态查询
   - `POST /knowledge_bases/{kb_id}/documents`：校验 KB 可用，检查大小/媒体类型，返回 202 与 `document_id`、`status=processing`；`GET /documents/{id}` & 列表支持状态过滤、410 语义。
   - _Requirements: Requirement 2 AC1-12, Requirement 5 AC2-4_
 
-- [ ] 5.1 文档解析与分块
+- [x] 5.1 文档解析与分块
   - 后台任务用 markitdown+OCR 解析 PDF/Word/Excel/PPT/TXT/Markdown/HTML/图片，保留结构；按 BGE-M3 tokenizer `chunk_size`/`overlap` 切分并记录元数据（文件名、页码/序号、ocr_skipped）。
   - _Requirements: Requirement 2 AC1-7, Technical Conventions (分块/向量化)_
 
-- [ ] 5.2 Embedding 写入与事务控制
+- [x] 5.2 Embedding 写入与事务控制
   - 使用 BGE-M3 生成 L2 归一化向量，事务性写入 chunks+vectors；任意分块失败则回滚、标记文档 `failed`+error_message，成功则置 `completed` 并记录 chunk_count。
   - _Requirements: Requirement 2 AC4-9, Requirement 5 AC3_
 

@@ -84,6 +84,8 @@ class Settings:
     max_top_k: int
     max_rerank_candidates: int
     hnsw_ef_search: int
+    chunk_size: int
+    chunk_overlap: int
     log_level: str
 
 
@@ -102,6 +104,8 @@ def get_settings() -> Settings:
         max_top_k=_get_int_env("RAG_MAX_TOP_K", 20),
         max_rerank_candidates=_get_int_env("RAG_MAX_RERANK_CANDIDATES", 100),
         hnsw_ef_search=_get_int_env("RAG_HNSW_EF_SEARCH", 40),
+        chunk_size=_get_int_env("RAG_CHUNK_SIZE", 512),
+        chunk_overlap=_get_int_env("RAG_CHUNK_OVERLAP", 64),
         log_level=_get_str_env("RAG_LOG_LEVEL", "INFO"),
     )
 
