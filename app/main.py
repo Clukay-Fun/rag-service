@@ -17,6 +17,7 @@ import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 
+from .api.knowledge_bases import router as knowledge_base_router
 from .config import get_settings
 from .errors import AppError, ErrorDetail, error_response
 
@@ -81,6 +82,15 @@ def create_app() -> FastAPI:
     app = FastAPI()
     app.state.settings = settings
     app.state.logger = logger
+
+    # ============================================
+    # region 路由注册
+    # ============================================
+
+    app.include_router(knowledge_base_router)
+
+    # endregion
+    # ============================================
 
     # ============================================
     # region 中间件

@@ -13,7 +13,7 @@ import enum
 from typing import Any, Dict, Optional
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, JSON, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -129,7 +129,7 @@ class DocumentChunk(Base):
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        "metadata", JSONB, nullable=True
+        "metadata", JSON().with_variant(JSONB, "postgresql"), nullable=True
     )
     embedding: Mapped[Any] = mapped_column(Vector(1024), nullable=False)
     created_at: Mapped[Any] = mapped_column(
@@ -161,7 +161,9 @@ class CleanupTask(Base):
         nullable=False,
         default=CleanupTaskStatus.PENDING,
     )
-    progress: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    progress: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[Any] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

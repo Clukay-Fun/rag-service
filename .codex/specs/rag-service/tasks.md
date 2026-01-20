@@ -9,7 +9,7 @@
   - 定义表结构、状态枚举、外键/索引（pgvector HNSW `vector_cosine_ops`），确保向量维度 1024；迁移脚本创建 HNSW 索引。
   - _Requirements: Requirement 1 AC1-11, Requirement 2 AC1-12, Requirement 3 AC1-7, Requirement 4 AC1-4_
 
-- [ ] 3. 知识库管理服务与 API
+- [x] 3. 知识库管理服务与 API
   - 实现创建/更新/删除/列表逻辑（名称唯一、状态机、deleted 后拒绝修改）；DELETE 返回 `cleanup_task_id` 并入队清理任务；分页/过滤。
   - _Requirements: Requirement 1 AC1-11, Requirement 5 AC2_
 
