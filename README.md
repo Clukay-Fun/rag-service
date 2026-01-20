@@ -46,7 +46,11 @@ requirements.txt：新增 markitdown>=0.0.1。
 路由注册：main.py。
 配置更新：config.py 增加 RAG_EMBEDDING_DIM。
 新增测试：test_search_api.py。
+- [x] 任务 7 - 健康探针与可观测性
+新增 /health 与 /ready 探针，/ready 校验数据库连通与模型就绪；新增 /metrics 输出 Prometheus 指标（请求量/延迟、摄取计数、活跃 KB、chunk 总数），并接入请求与摄取计数采集。
+新增测试：test_observability_api.py。
+- [x] 任务 8 - 测试矩阵扩展
+新增服务层单元测试（知识库状态机、清理任务执行、检索评分归一化与异常路径），补充检索 top_k 上限测试，扩大测试覆盖。
 
 ### 待开发
-- [ ] 任务 7 - 健康探针与可观测性
-- [ ] 任务 8 - 测试矩阵扩展
+- [ ] 无

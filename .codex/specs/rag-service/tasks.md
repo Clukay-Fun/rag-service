@@ -33,11 +33,11 @@
   - `POST /search`：校验 KB 状态 enabled，仅检索 `completed` 文档分块；query embedding→pgvector cosine 取 min(top_k*3, RAG_MAX_RERANK_CANDIDATES) 候选→bge-reranker sigmoid 归一→返回 chunk_text/score/document_id/filename/chunk_index。
   - _Requirements: Requirement 3 AC1-7, Technical Conventions (相关性归一)_
 
-- [ ] 7. 健康探针与可观测性
+- [x] 7. 健康探针与可观测性
   - 实现 `/health`（存活）与 `/ready`（就绪，检查 DB/模型加载），依赖未就绪返回 503；Prometheus `/metrics` 输出请求量/延迟、摄取成功失败、活跃 KB、chunk 总量指标；结构化日志覆盖异常堆栈。
   - _Requirements: Requirement 4 AC1-4, Requirement 5 AC1-5_
 
-- [ ] 8. 测试矩阵
+- [x] 8. 测试矩阵
   - 单元：KB 服务状态机、分块策略、评分归一化、清理重试、配置边界（top_k/文件大小）。
   - 集成/契约：FastAPI TestClient 覆盖 CRUD/摄取/检索 happy-path 与 4xx/5xx、错误 schema；运行小型 pgvector 容器演练上传→检索全链路（可 mock 模型以控资源）。
   - _Requirements: 全部（验证功能/错误/性能基线）_

@@ -19,10 +19,12 @@ from fastapi.exceptions import RequestValidationError
 
 from .api.cleanup_tasks import router as cleanup_task_router
 from .api.documents import router as document_router
-from .api.search import router as search_router
 from .api.knowledge_bases import router as knowledge_base_router
+from .api.observability import router as observability_router
+from .api.search import router as search_router
 from .config import get_settings
 from .errors import AppError, ErrorDetail, error_response
+from .services.metrics import record_http_request
 
 # ============================================
 # region 辅助函数
@@ -64,6 +66,21 @@ def _setup_logging(level: str) -> logging.Logger:
     return logging.getLogger("rag_service")
 
 
+def _resolve_endpoint(request: Request) -> str:
+    """
+    获取路由模板或实际路径。
+
+    参数:
+        request: FastAPI 请求对象。
+    返回:
+        路由模板或实际路径。
+    """
+    route = request.scope.get("route")
+    if route is not None and getattr(route, "path", None):
+        return route.path
+    return request.url.path
+
+
 # endregion
 # ============================================
 
@@ -94,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(cleanup_task_router)
     app.include_router(document_router)
     app.include_router(search_router)
+    app.include_router(observability_router)
 
     # endregion
     # ============================================
@@ -133,6 +151,13 @@ def create_app() -> FastAPI:
                     }
                 )
             )
+            duration_seconds = time.perf_counter() - start
+            record_http_request(
+                request.method,
+                _resolve_endpoint(request),
+                str(status_code),
+                duration_seconds,
+            )
             raise
         duration_ms = int((time.perf_counter() - start) * 1000)
         response.headers["X-Request-ID"] = request_id
@@ -147,6 +172,12 @@ def create_app() -> FastAPI:
                     "request_id": request_id,
                 }
             )
+        )
+        record_http_request(
+            request.method,
+            _resolve_endpoint(request),
+            str(response.status_code),
+            duration_ms / 1000,
         )
         return response
 

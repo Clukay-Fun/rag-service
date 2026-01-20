@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Document, DocumentChunk, DocumentStatus
 from app.errors import AppError
 from app.services.chunker import Chunk
+from app.services.metrics import record_document_ingestion
 
 # ============================================
 # region 向量处理
@@ -52,6 +53,9 @@ def embed_texts(texts: List[str]) -> List[List[float]]:
     raise NotImplementedError("embedding 服务未实现")
 
 
+_DEFAULT_EMBEDDER = embed_texts
+
+
 def set_embedder(embedder: Callable[[List[str]], List[List[float]]]) -> None:
     """
     设置全局 embedding 实现（用于测试或替换实现）。
@@ -61,6 +65,24 @@ def set_embedder(embedder: Callable[[List[str]], List[List[float]]]) -> None:
     """
     global embed_texts
     embed_texts = embedder
+
+
+def reset_embedder() -> None:
+    """
+    重置 embedding 实现为默认占位。
+    """
+    global embed_texts
+    embed_texts = _DEFAULT_EMBEDDER
+
+
+def is_embedder_ready() -> bool:
+    """
+    判断 embedding 实现是否就绪。
+
+    返回:
+        是否已配置 embedding 实现。
+    """
+    return embed_texts is not _DEFAULT_EMBEDDER
 
 
 # endregion
@@ -140,6 +162,7 @@ def persist_embeddings(
             document.status = DocumentStatus.FAILED
             document.error_message = str(exc)
             db.commit()
+        record_document_ingestion("failed")
         raise AppError(
             status_code=500,
             code="INTERNAL_ERROR",
@@ -147,6 +170,7 @@ def persist_embeddings(
         ) from exc
 
     db.refresh(document)
+    record_document_ingestion("completed")
     return document
 
 
