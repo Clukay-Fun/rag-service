@@ -5,7 +5,7 @@
   - 中间件生成 `request_id` 写入响应头 `X-Request-ID` 与结构化日志；实现统一错误响应格式与资源校验顺序（存在性→可用性→权限）。
   - _Requirements: Technical Conventions (错误格式/校验顺序/环境变量), Requirement 5 AC1-3_
 
-- [ ] 2. 数据模型与迁移（knowledge_bases/documents/document_chunks/cleanup_tasks）
+- [x] 2. 数据模型与迁移（knowledge_bases/documents/document_chunks/cleanup_tasks）
   - 定义表结构、状态枚举、外键/索引（pgvector HNSW `vector_cosine_ops`），确保向量维度 1024；迁移脚本创建 HNSW 索引。
   - _Requirements: Requirement 1 AC1-11, Requirement 2 AC1-12, Requirement 3 AC1-7, Requirement 4 AC1-4_
 
